@@ -3,331 +3,125 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PARTICULA — Audio Visualizer</title>
+<title>PARTICULA — Cyberpunk Audio Visualizer</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;600&family=Space+Mono:wght@400;700&display=swap');
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --col-bg: #010206;
-    --col-ui-bg: rgba(2, 6, 16, 0.88);
-    --col-border: rgba(0, 255, 220, 0.15);
-    --col-accent: #00ffdc;
-    --col-accent2: #ff00c8;
-    --col-text: rgba(180, 255, 245, 0.9);
-    --col-text-dim: rgba(0, 200, 180, 0.45);
+    --bg: #010206;
+    --ui-bg: rgba(2, 6, 16, 0.88);
+    --border: rgba(0, 255, 220, 0.15);
+    --cyan: #00ffdc;
+    --magenta: #ff00c8;
+    --text: rgba(180, 255, 245, 0.9);
+    --text-dim: rgba(0, 200, 180, 0.45);
   }
 
-  html, body {
-    width: 100%; height: 100%;
-    background: var(--col-bg);
-    overflow: hidden;
-    font-family: 'Rajdhani', sans-serif;
-    color: var(--col-text);
-    cursor: crosshair;
-  }
+  html, body { width:100%; height:100%; background:var(--bg); overflow:hidden; font-family:'Rajdhani',sans-serif; color:var(--text); cursor:crosshair; }
+  canvas { position:fixed; inset:0; display:block; }
+  #ui { position:fixed; inset:0; pointer-events:none; z-index:10; }
 
-  canvas {
-    position: fixed;
-    inset: 0;
-    display: block;
-  }
-
-  /* ── OVERLAY UI ── */
-  #ui {
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: 10;
-  }
-
-  /* ── TITLE ── */
-  #title-block {
-    position: absolute;
-    top: 32px; left: 40px;
-    pointer-events: none;
-  }
+  #title-block { position:absolute; top:32px; left:40px; }
   #title-block h1 {
-    font-family: 'Space Mono', monospace;
-    font-size: clamp(18px, 2.5vw, 28px);
-    font-weight: 700;
-    letter-spacing: 0.35em;
-    background: linear-gradient(90deg, var(--col-accent), var(--col-accent2));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    text-transform: uppercase;
+    font-family:'Space Mono',monospace; font-size:clamp(16px,2.5vw,26px);
+    font-weight:700; letter-spacing:0.35em;
+    background:linear-gradient(90deg,var(--cyan),var(--magenta));
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; text-transform:uppercase;
   }
-  #title-block p {
-    font-size: 11px;
-    letter-spacing: 0.2em;
-    color: var(--col-text-dim);
-    margin-top: 4px;
-    text-transform: uppercase;
-  }
+  #title-block p { font-size:10px; letter-spacing:0.2em; color:var(--text-dim); margin-top:4px; text-transform:uppercase; }
 
-  /* ── STATUS BAR ── */
-  #status {
-    position: absolute;
-    top: 32px; right: 40px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-family: 'Space Mono', monospace;
-    font-size: 11px;
-    letter-spacing: 0.15em;
-    color: var(--col-text-dim);
-    text-transform: uppercase;
-  }
-  #status-dot {
-    width: 7px; height: 7px;
-    border-radius: 50%;
-    background: #333;
-    transition: background 0.3s, box-shadow 0.3s;
-  }
-  #status-dot.active {
-    background: var(--col-accent);
-    box-shadow: 0 0 10px var(--col-accent);
-    animation: pulse-dot 1.5s ease-in-out infinite;
-  }
-  @keyframes pulse-dot {
-    0%,100% { box-shadow: 0 0 6px var(--col-accent); }
-    50%      { box-shadow: 0 0 16px var(--col-accent), 0 0 30px var(--col-accent); }
-  }
+  #status { position:absolute; top:32px; right:40px; display:flex; align-items:center; gap:8px; font-family:'Space Mono',monospace; font-size:11px; letter-spacing:0.15em; color:var(--text-dim); text-transform:uppercase; }
+  #status-dot { width:7px; height:7px; border-radius:50%; background:#333; transition:background .3s,box-shadow .3s; }
+  #status-dot.live { background:var(--cyan); box-shadow:0 0 10px var(--cyan); animation:pdot 1.5s ease-in-out infinite; }
+  @keyframes pdot { 0%,100%{box-shadow:0 0 6px var(--cyan)} 50%{box-shadow:0 0 18px var(--cyan),0 0 32px var(--cyan)} }
 
-  /* ── CONTROLS PANEL ── */
-  #controls {
-    position: absolute;
-    bottom: 32px; left: 40px;
-    pointer-events: all;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
+  #controls { position:absolute; bottom:32px; left:40px; pointer-events:all; display:flex; flex-direction:column; gap:12px; }
+  .ctrl-row { display:flex; align-items:center; gap:14px; }
+  .ctrl-label { font-family:'Space Mono',monospace; font-size:9px; letter-spacing:0.2em; color:var(--text-dim); text-transform:uppercase; width:56px; }
+  .ctrl-slider { -webkit-appearance:none; appearance:none; width:120px; height:3px; background:rgba(0,255,220,0.12); border-radius:2px; outline:none; cursor:pointer; }
+  .ctrl-slider::-webkit-slider-thumb { -webkit-appearance:none; width:12px; height:12px; border-radius:50%; background:var(--cyan); box-shadow:0 0 8px var(--cyan); cursor:grab; }
+  .ctrl-val { font-family:'Space Mono',monospace; font-size:10px; color:var(--cyan); min-width:32px; }
 
-  .ctrl-row {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-  }
+  #btn-row { position:absolute; bottom:32px; right:40px; display:flex; gap:12px; pointer-events:all; }
+  .btn { background:var(--ui-bg); border:1px solid var(--border); border-radius:3px; padding:10px 22px; font-family:'Space Mono',monospace; font-size:11px; letter-spacing:0.15em; text-transform:uppercase; color:var(--text); cursor:pointer; transition:all .2s; }
+  .btn:hover { border-color:var(--cyan); color:var(--cyan); box-shadow:0 0 16px rgba(0,255,220,0.25); transform:translateY(-1px); }
+  .btn.primary { border-color:rgba(0,255,220,0.35); color:var(--cyan); }
+  .btn:active { transform:scale(0.97); }
 
-  .ctrl-label {
-    font-family: 'Space Mono', monospace;
-    font-size: 9px;
-    letter-spacing: 0.2em;
-    color: var(--col-text-dim);
-    text-transform: uppercase;
-    width: 56px;
-  }
+  #freq-bar { position:absolute; bottom:0; left:0; right:0; height:60px; pointer-events:none; opacity:0.5; }
 
-  .ctrl-slider {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 120px; height: 3px;
-    background: rgba(80,180,255,0.15);
-    border-radius: 2px;
-    outline: none;
-    cursor: pointer;
-  }
-  .ctrl-slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 12px; height: 12px;
-    border-radius: 50%;
-    background: var(--col-accent);
-    box-shadow: 0 0 8px var(--col-accent);
-    cursor: grab;
-    transition: transform 0.1s;
-  }
-  .ctrl-slider:active::-webkit-slider-thumb { transform: scale(1.4); }
-
-  .ctrl-val {
-    font-family: 'Space Mono', monospace;
-    font-size: 10px;
-    color: var(--col-accent);
-    min-width: 32px;
-  }
-
-  /* ── BUTTONS ── */
-  #btn-row {
-    position: absolute;
-    bottom: 32px; right: 40px;
-    display: flex;
-    gap: 12px;
-    pointer-events: all;
-  }
-
-  .btn {
-    background: var(--col-ui-bg);
-    border: 1px solid var(--col-border);
-    border-radius: 4px;
-    padding: 10px 22px;
-    font-family: 'Space Mono', monospace;
-    font-size: 11px;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: var(--col-text);
-    cursor: pointer;
-    transition: border-color 0.2s, color 0.2s, box-shadow 0.2s, transform 0.1s;
-  }
-  .btn:hover {
-    border-color: var(--col-accent);
-    color: var(--col-accent);
-    box-shadow: 0 0 16px rgba(0,212,255,0.2);
-    transform: translateY(-1px);
-  }
-  .btn.primary {
-    border-color: rgba(0,212,255,0.4);
-    color: var(--col-accent);
-  }
-  .btn:active { transform: scale(0.97); }
-
-  /* ── FREQ BARS ── */
-  #freq-bar {
-    position: absolute;
-    bottom: 0; left: 0; right: 0;
-    height: 60px;
-    pointer-events: none;
-    opacity: 0.45;
-  }
-
-  /* ── ONBOARDING OVERLAY ── */
   #onboard {
-    position: fixed;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 20px;
-    z-index: 20;
-    background: radial-gradient(ellipse at center, rgba(2,4,8,0.6) 0%, rgba(2,4,8,0.95) 100%);
-    backdrop-filter: blur(4px);
-    transition: opacity 0.8s;
+    position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px;
+    z-index:20; background:radial-gradient(ellipse at center,rgba(1,3,10,.65) 0%,rgba(1,2,6,.97) 100%);
+    backdrop-filter:blur(4px); transition:opacity .8s;
   }
-  #onboard.hidden { opacity: 0; pointer-events: none; }
-
+  #onboard.gone { opacity:0; pointer-events:none; }
   #onboard h2 {
-    font-family: 'Space Mono', monospace;
-    font-size: clamp(28px, 5vw, 56px);
-    font-weight: 700;
-    letter-spacing: 0.3em;
-    text-align: center;
-    background: linear-gradient(135deg, var(--col-accent) 0%, var(--col-accent2) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    animation: shimmer 3s ease-in-out infinite alternate;
+    font-family:'Space Mono',monospace; font-size:clamp(26px,5vw,54px); font-weight:700;
+    letter-spacing:0.3em; text-align:center;
+    background:linear-gradient(135deg,var(--cyan),var(--magenta));
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    animation:glow 3s ease-in-out infinite alternate;
   }
-  @keyframes shimmer {
-    from { filter: brightness(1); }
-    to   { filter: brightness(1.3) drop-shadow(0 0 20px rgba(0,212,255,0.5)); }
+  @keyframes glow { from{filter:brightness(1)} to{filter:brightness(1.3) drop-shadow(0 0 22px rgba(0,255,220,.5))} }
+  #onboard p { font-size:clamp(13px,1.5vw,16px); letter-spacing:0.1em; color:var(--text-dim); text-align:center; max-width:480px; line-height:1.9; }
+  #onboard .sub { font-family:'Space Mono',monospace; font-size:11px; color:rgba(0,180,160,.45); letter-spacing:0.15em; text-transform:uppercase; margin-top:4px; }
+
+  #btn-start {
+    margin-top:8px; background:transparent; border:1px solid var(--cyan); border-radius:3px;
+    padding:14px 52px; font-family:'Space Mono',monospace; font-size:13px;
+    letter-spacing:0.25em; text-transform:uppercase; color:var(--cyan); cursor:pointer;
+    position:relative; overflow:hidden; transition:box-shadow .3s,transform .2s;
   }
-  #onboard p {
-    font-size: clamp(13px, 1.5vw, 16px);
-    letter-spacing: 0.1em;
-    color: var(--col-text-dim);
-    text-align: center;
-    max-width: 480px;
-    line-height: 1.8;
+  #btn-start::before {
+    content:''; position:absolute; inset:0;
+    background:linear-gradient(90deg,transparent,rgba(0,255,220,.12),transparent);
+    transform:translateX(-100%); animation:scanline 2s linear infinite;
   }
-  #onboard .hint {
-    font-family: 'Space Mono', monospace;
-    font-size: 11px;
-    color: rgba(80,150,200,0.5);
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    margin-top: 8px;
-  }
-  .start-btn {
-    margin-top: 10px;
-    background: transparent;
-    border: 1px solid var(--col-accent);
-    border-radius: 4px;
-    padding: 14px 48px;
-    font-family: 'Space Mono', monospace;
-    font-size: 13px;
-    letter-spacing: 0.25em;
-    text-transform: uppercase;
-    color: var(--col-accent);
-    cursor: pointer;
-    position: relative;
-    overflow: hidden;
-    transition: box-shadow 0.3s, transform 0.2s;
-  }
-  .start-btn::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(90deg, transparent, rgba(0,212,255,0.1), transparent);
-    transform: translateX(-100%);
-    animation: scan 2s linear infinite;
-  }
-  @keyframes scan {
-    to { transform: translateX(100%); }
-  }
-  .start-btn:hover {
-    box-shadow: 0 0 30px rgba(0,212,255,0.3), inset 0 0 20px rgba(0,212,255,0.05);
-    transform: scale(1.03);
-  }
+  @keyframes scanline { to{transform:translateX(100%)} }
+  #btn-start:hover { box-shadow:0 0 32px rgba(0,255,220,.35),inset 0 0 20px rgba(0,255,220,.06); transform:scale(1.03); }
 
   #beat-flash {
-    position: fixed;
-    inset: 0;
-    background: 
-      radial-gradient(ellipse at 40% 50%, rgba(0,255,220,0.07) 0%, transparent 60%),
-      radial-gradient(ellipse at 60% 50%, rgba(255,0,200,0.07) 0%, transparent 60%);
-    pointer-events: none;
-    opacity: 0;
-    z-index: 5;
-    transition: opacity 0.05s;
+    position:fixed; inset:0; pointer-events:none; opacity:0; z-index:5;
+    background: radial-gradient(ellipse at 38% 50%,rgba(0,255,220,.09) 0%,transparent 60%),
+                radial-gradient(ellipse at 62% 50%,rgba(255,0,200,.09) 0%,transparent 60%);
+    transition:opacity .05s;
   }
-  #beat-flash.flash { opacity: 1; }
+  #beat-flash.flash { opacity:1; }
 
-  /* ── TOOLTIP ── */
   #tooltip {
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    font-family: 'Space Mono', monospace;
-    font-size: 11px;
-    letter-spacing: 0.2em;
-    color: var(--col-text-dim);
-    text-transform: uppercase;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 1s;
-    text-align: center;
-    line-height: 1.8;
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    font-family:'Space Mono',monospace; font-size:11px; letter-spacing:0.2em;
+    color:var(--text-dim); text-transform:uppercase; pointer-events:none;
+    opacity:0; transition:opacity 1s; text-align:center; line-height:1.8;
   }
-  #tooltip.show { opacity: 1; }
+  #tooltip.show { opacity:1; }
 </style>
 </head>
 <body>
 
 <canvas id="c"></canvas>
 <canvas id="freq-bar"></canvas>
-
 <div id="beat-flash"></div>
 
-<!-- ONBOARDING -->
 <div id="onboard">
   <h2>PARTICULA</h2>
-  <p>A physics-based particle universe that reacts to your audio in real time.</p>
-  <p class="hint">Works with Spotify · YouTube · Any system audio</p>
-  <button class="start-btn" id="btn-start">Initialize System</button>
+  <p>A physics-based cyberpunk particle universe.<br>Reacts to any audio in real time.</p>
+  <p class="sub">Spotify &middot; YouTube &middot; Local audio &middot; Anything</p>
+  <button id="btn-start">Initialize System</button>
 </div>
 
-<!-- UI LAYER -->
 <div id="ui">
   <div id="title-block">
     <h1>Particula</h1>
-    <p>Particle Physics Visualizer</p>
+    <p>Cyberpunk Particle Visualizer</p>
   </div>
-
   <div id="status">
     <div id="status-dot"></div>
     <span id="status-text">Standby</span>
   </div>
-
   <div id="controls">
     <div class="ctrl-row">
       <span class="ctrl-label">Gravity</span>
@@ -336,7 +130,7 @@
     </div>
     <div class="ctrl-row">
       <span class="ctrl-label">Particles</span>
-      <input type="range" class="ctrl-slider" id="sl-count" min="1000" max="15000" step="500" value="6000">
+      <input type="range" class="ctrl-slider" id="sl-count" min="500" max="12000" step="500" value="6000">
       <span class="ctrl-val" id="val-count">6k</span>
     </div>
     <div class="ctrl-row">
@@ -350,177 +144,145 @@
       <span class="ctrl-val" id="val-force">80</span>
     </div>
   </div>
-
   <div id="btn-row">
     <button class="btn" id="btn-mic">Microphone</button>
     <button class="btn primary" id="btn-system">System Audio</button>
   </div>
-
   <div id="tooltip"></div>
 </div>
 
 <script>
-// ─────────────────────────────────────────────
-// PARTICULA — Audio Visualizer
-// ─────────────────────────────────────────────
+"use strict";
 
-const canvas = document.getElementById('c');
-const ctx = canvas.getContext('2d');
-const freqCanvas = document.getElementById('freq-bar');
-const fctx = freqCanvas.getContext('2d');
+// ── CANVAS ────────────────────────────────────
+const canvas  = document.getElementById('c');
+const ctx     = canvas.getContext('2d');
+const fcanvas = document.getElementById('freq-bar');
+const fctx    = fcanvas.getContext('2d');
 
-let W, H;
+let W = 0, H = 0;
 function resize() {
-  W = canvas.width = freqCanvas.width = window.innerWidth;
+  W = canvas.width = fcanvas.width = window.innerWidth;
   H = canvas.height = window.innerHeight;
-  freqCanvas.height = 60;
+  fcanvas.height = 60;
 }
 resize();
 window.addEventListener('resize', () => { resize(); initParticles(); });
 
-// ── AUDIO ──
-let audioCtx, analyser, dataArray, freqBinCount;
+// ── CYBERPUNK PALETTE — locked neon hues ─────
+const HUES = [185, 300, 55, 0, 140]; // cyan, magenta, yellow, red, green
+
+// ── PARTICLE BUFFERS ──────────────────────────
+const MAX    = 14000;
+const px     = new Float32Array(MAX);
+const py     = new Float32Array(MAX);
+const pvx    = new Float32Array(MAX);
+const pvy    = new Float32Array(MAX);
+const pmass  = new Float32Array(MAX);
+const phue   = new Uint8Array(MAX);   // index into HUES[]
+const pshape = new Uint8Array(MAX);   // 0=crossdot  1=diamond  2=spark
+let   pCount = 0;
+
+// ── AUDIO STATE ───────────────────────────────
+let audioCtx, analyser, fftData;
 let audioActive = false;
 let bass = 0, mids = 0, highs = 0, vol = 0;
-let beatEnergy = 0, beatHistory = [], lastBeat = 0;
+let beatHistory = [], lastBeat = 0;
 
-function setupAnalyser(stream) {
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  const source = audioCtx.createMediaStreamSource(stream);
-  analyser = audioCtx.createAnalyser();
-  analyser.fftSize = 2048;
-  analyser.smoothingTimeConstant = 0.82;
-  freqBinCount = analyser.frequencyBinCount;
-  dataArray = new Uint8Array(freqBinCount);
-  source.connect(analyser);
-  audioActive = true;
-  document.getElementById('status-dot').classList.add('active');
+// ── FX STATE ──────────────────────────────────
+let chromaOff  = 0;
+let glitchLeft = 0;
+const shockwaves = [];
+
+// ── CONTROLS ──────────────────────────────────
+let gravityMul  = 0.4;
+let trailAlpha  = 8;
+let forceMul    = 80;
+let targetCount = 6000;
+
+// ── MOUSE ─────────────────────────────────────
+const mouse = { x: 0, y: 0, down: false };
+window.addEventListener('mousemove', e => { mouse.x = e.clientX - W/2; mouse.y = e.clientY - H/2; });
+window.addEventListener('mousedown', () => { mouse.down = true; });
+window.addEventListener('mouseup',   () => { mouse.down = false; });
+
+// ── AUDIO HELPERS ─────────────────────────────
+function avgSlice(arr, s, e) {
+  let t = 0;
+  for (let i = s; i < e; i++) t += arr[i];
+  return t / ((e - s) * 255);
 }
 
-function avg(arr, s, e) {
-  let sum = 0;
-  for (let i = s; i < e; i++) sum += arr[i];
-  return sum / (e - s) / 255;
+function setupAnalyser(stream) {
+  if (audioCtx) audioCtx.close();
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const src = audioCtx.createMediaStreamSource(stream);
+  analyser  = audioCtx.createAnalyser();
+  analyser.fftSize = 2048;
+  analyser.smoothingTimeConstant = 0.82;
+  fftData = new Uint8Array(analyser.frequencyBinCount);
+  src.connect(analyser);
+  audioActive = true;
+  document.getElementById('status-dot').classList.add('live');
 }
 
 function analyzeAudio() {
   if (!analyser) return;
-  analyser.getByteFrequencyData(dataArray);
-  bass  = avg(dataArray, 0,   12);
-  mids  = avg(dataArray, 12,  120);
-  highs = avg(dataArray, 120, 280);
-  vol   = avg(dataArray, 0,   280);
-
-  // beat detection
+  analyser.getByteFrequencyData(fftData);
+  bass  = avgSlice(fftData,   0,  12);
+  mids  = avgSlice(fftData,  12, 120);
+  highs = avgSlice(fftData, 120, 280);
+  vol   = avgSlice(fftData,   0, 280);
   beatHistory.push(bass);
   if (beatHistory.length > 60) beatHistory.shift();
-  const avgBass = beatHistory.reduce((a,b) => a+b, 0) / beatHistory.length;
-  if (bass > avgBass * 1.45 && Date.now() - lastBeat > 200) {
+  const avg = beatHistory.reduce((a, b) => a + b, 0) / beatHistory.length;
+  if (bass > avg * 1.45 && Date.now() - lastBeat > 200) {
     lastBeat = Date.now();
     onBeat();
   }
 }
 
+function idlePulse() {
+  const t = Date.now() / 1000;
+  bass  = 0.15 + Math.sin(t * 0.7)  * 0.08;
+  mids  = 0.10 + Math.sin(t * 1.3)  * 0.06;
+  highs = 0.05 + Math.sin(t * 2.1)  * 0.04;
+  vol   = (bass + mids + highs) / 3;
+}
+
 function onBeat() {
-  const flash = document.getElementById('beat-flash');
-  flash.classList.add('flash');
-  setTimeout(() => flash.classList.remove('flash'), 80);
-  // chromatic aberration burst
-  chromaOffset = 3 + bass * 8;
-  // random glitch
-  if (Math.random() < 0.4) glitchTimer = 0.3 + Math.random() * 0.4;
-  // shockwave
+  const fl = document.getElementById('beat-flash');
+  fl.classList.add('flash');
+  setTimeout(() => fl.classList.remove('flash'), 80);
+  chromaOff  = 3 + bass * 9;
+  if (Math.random() < 0.4) glitchLeft = Math.floor(4 + Math.random() * 8);
   spawnShockwave(W/2 + mouse.x * 0.2, H/2 + mouse.y * 0.2);
 }
 
-// ── MOUSE ──
-const mouse = { x: 0, y: 0, down: false };
-window.addEventListener('mousemove', e => {
-  mouse.x = e.clientX - W/2;
-  mouse.y = e.clientY - H/2;
-});
-window.addEventListener('mousedown', () => mouse.down = true);
-window.addEventListener('mouseup',   () => mouse.down = false);
-
-// ── CONTROLS ──
-let gravityMul = 0.4;
-let trailAlpha = 8;
-let forceMul = 80;
-let targetCount = 6000;
-
-function bindSlider(id, valId, cb) {
-  const sl = document.getElementById(id);
-  const vl = document.getElementById(valId);
-  sl.addEventListener('input', () => cb(+sl.value, vl));
+function spawnShockwave(x, y) {
+  shockwaves.push({ x, y, r: 0, maxR: Math.min(W, H) * 0.6, str: (bass + 0.3) * forceMul * 2 });
 }
-bindSlider('sl-gravity', 'val-gravity', (v, el) => { gravityMul = v/100; el.textContent = v; });
-bindSlider('sl-trail',   'val-trail',   (v, el) => { trailAlpha = v; el.textContent = v; });
-bindSlider('sl-force',   'val-force',   (v, el) => { forceMul = v; el.textContent = v; });
-bindSlider('sl-count',   'val-count',   (v, el) => {
-  targetCount = v;
-  el.textContent = v >= 1000 ? (v/1000).toFixed(v%1000===0?0:1)+'k' : v;
-  initParticles();
-});
 
-// ── PARTICLES ──
-const MAX = 16000;
-const px = new Float32Array(MAX);
-const py = new Float32Array(MAX);
-const pvx = new Float32Array(MAX);
-const pvy = new Float32Array(MAX);
-const pmass = new Float32Array(MAX);
-const plife = new Float32Array(MAX);
-const phue = new Float32Array(MAX);
-
-let pCount = 0;
-const shockwaves = [];
+// ── PARTICLE HELPERS ──────────────────────────
+function resetParticle(i, spread) {
+  const angle = Math.random() * Math.PI * 2;
+  const r     = spread ? Math.random() * Math.min(W, H) * 0.44 : 5;
+  px[i]     = W/2 + Math.cos(angle) * r;
+  py[i]     = H/2 + Math.sin(angle) * r;
+  pvx[i]    = (Math.random() - 0.5) * 1.5;
+  pvy[i]    = (Math.random() - 0.5) * 1.5;
+  pmass[i]  = 0.5 + Math.random() * 1.5;
+  phue[i]   = Math.floor(Math.random() * HUES.length);
+  const roll = Math.random();
+  pshape[i] = roll < 0.60 ? 0 : roll < 0.85 ? 1 : 2;
+}
 
 function initParticles() {
   pCount = Math.min(targetCount, MAX);
-  for (let i = 0; i < pCount; i++) {
-    resetParticle(i, true);
-  }
+  for (let i = 0; i < pCount; i++) resetParticle(i, true);
 }
 
-function resetParticle(i, init) {
-  const angle = Math.random() * Math.PI * 2;
-  const r = init ? Math.random() * Math.min(W, H) * 0.45 : Math.random() * 10;
-  px[i] = W/2 + Math.cos(angle) * r;
-  py[i] = H/2 + Math.sin(angle) * r;
-  pvx[i] = (Math.random() - 0.5) * 1.5;
-  pvy[i] = (Math.random() - 0.5) * 1.5;
-  pmass[i] = 0.5 + Math.random() * 1.5;
-  plife[i] = 0.5 + Math.random() * 0.5;
-  // Cyberpunk palette: snap hue to one of 5 neon colors
-  const slot = Math.floor(Math.random() * CYBER_PALETTE.length);
-  phue[i] = slot * (360 / CYBER_PALETTE.length);
-  // 60% dots, 25% diamonds, 15% sparks
-  const r2 = Math.random();
-  ptype[i] = r2 < 0.60 ? 0 : r2 < 0.85 ? 1 : 3;
-}
-
-function spawnShockwave(x, y) {
-  shockwaves.push({ x, y, r: 0, maxR: Math.min(W, H) * 0.6, strength: bass * forceMul * 2 });
-}
-
-// ── CYBERPUNK COLOR PALETTE ──
-// Locked to cyan / magenta / yellow / red — no rainbow spray
-const CYBER_PALETTE = [
-  { h: 185, label: 'cyan' },
-  { h: 300, label: 'magenta' },
-  { h: 55,  label: 'yellow' },
-  { h: 0,   label: 'red' },
-  { h: 140, label: 'green' },
-];
-const ptype = new Uint8Array(MAX); // 0=dot+cross, 1=diamond, 2=streak, 3=spark
-
-function particleHue(i) {
-  const slot = CYBER_PALETTE[Math.floor(phue[i] / (360 / CYBER_PALETTE.length))];
-  return slot.h;
-}
-
-// Draw a diamond shape
-function drawDiamond(x, y, r) {
+function diamond(x, y, r) {
   ctx.beginPath();
   ctx.moveTo(x,     y - r);
   ctx.lineTo(x + r, y    );
@@ -529,392 +291,273 @@ function drawDiamond(x, y, r) {
   ctx.closePath();
 }
 
-// Draw a cross/plus shape
-function drawCross(x, y, r) {
-  const t = r * 0.28;
-  ctx.beginPath();
-  ctx.moveTo(x - t, y - r); ctx.lineTo(x + t, y - r);
-  ctx.lineTo(x + t, y - t); ctx.lineTo(x + r, y - t);
-  ctx.lineTo(x + r, y + t); ctx.lineTo(x + t, y + t);
-  ctx.lineTo(x + t, y + r); ctx.lineTo(x - t, y + r);
-  ctx.lineTo(x - t, y + t); ctx.lineTo(x - r, y + t);
-  ctx.lineTo(x - r, y - t); ctx.lineTo(x - t, y - t);
-  ctx.closePath();
-}
-
-// Chromatic aberration offset (beats)
-let chromaOffset = 0;
-let glitchTimer = 0;
-
-// ── RENDER LOOP ──
-let frame = 0;
-let lastTime = 0;
+// ── RENDER LOOP ───────────────────────────────
+let frame = 0, lastTS = 0, running = false;
 
 function loop(ts) {
+  if (!running) return;
   requestAnimationFrame(loop);
-  const dt = Math.min((ts - lastTime) / 16.67, 3);
-  lastTime = ts;
+  const dt = Math.min((ts - lastTS) / 16.67, 3);
+  lastTS = ts;
   frame++;
 
-  analyzeAudio();
+  if (!audioActive) idlePulse();
+  else analyzeAudio();
 
-  const energy = vol;
+  const energy     = vol;
   const bassFactor = bass * gravityMul * forceMul;
   const midFactor  = mids * 0.5;
   const highFactor = highs * 2;
+  const trailA     = 0.055 + (trailAlpha / 20) * 0.13;
 
-  // ── TRAIL FADE — deep black with slight cyan tint ──
-  ctx.fillStyle = `rgba(1,3,8,${0.055 + (trailAlpha/20) * 0.13})`;
+  // Background fade
+  ctx.fillStyle = `rgba(1,2,8,${trailA})`;
   ctx.fillRect(0, 0, W, H);
 
-  // ── SCANLINE GRID OVERLAY ──
-  if (frame % 3 === 0) { // draw every 3 frames for perf
+  // Scanline grid (every 4th frame for perf)
+  if (frame % 4 === 0) {
     ctx.save();
-    ctx.strokeStyle = `rgba(0,255,220,${0.018 + energy * 0.022})`;
-    ctx.lineWidth = 0.5;
-    const gridSpacing = 48;
-    for (let gx2 = 0; gx2 < W; gx2 += gridSpacing) {
-      ctx.beginPath(); ctx.moveTo(gx2, 0); ctx.lineTo(gx2, H); ctx.stroke();
-    }
-    for (let gy2 = 0; gy2 < H; gy2 += gridSpacing) {
-      ctx.beginPath(); ctx.moveTo(0, gy2); ctx.lineTo(W, gy2); ctx.stroke();
-    }
+    ctx.strokeStyle = `rgba(0,255,220,${0.015 + energy * 0.02})`;
+    ctx.lineWidth = 0.4;
+    for (let gx = 0; gx < W; gx += 48) { ctx.beginPath(); ctx.moveTo(gx,0); ctx.lineTo(gx,H); ctx.stroke(); }
+    for (let gy = 0; gy < H; gy += 48) { ctx.beginPath(); ctx.moveTo(0,gy); ctx.lineTo(W,gy); ctx.stroke(); }
     ctx.restore();
   }
 
-  // ── HORIZONTAL SCANLINES (CRT effect) ──
-  if (frame % 60 === 0 || glitchTimer > 0) {
-    ctx.save();
-    ctx.fillStyle = `rgba(0,0,0,${0.04})`;
-    for (let sl = 0; sl < H; sl += 4) {
-      ctx.fillRect(0, sl, W, 1);
-    }
-    ctx.restore();
-  }
-
-  // ── GRAVITY WELL: cursor ──
-  const gx = W/2 + mouse.x;
-  const gy = H/2 + mouse.y;
-  const centerPull = mouse.down ? 3 : 1;
-
-  // ── SHOCKWAVES — hexagonal cyber rings ──
+  // Shockwave rings
   for (let s = shockwaves.length - 1; s >= 0; s--) {
     const sw = shockwaves[s];
     sw.r += 10 * dt;
     if (sw.r > sw.maxR) { shockwaves.splice(s, 1); continue; }
     const prog = sw.r / sw.maxR;
-    const alpha = (1 - prog) * 0.7;
-
-    // Outer ring cyan
-    ctx.beginPath();
-    ctx.arc(sw.x, sw.y, sw.r, 0, Math.PI*2);
-    ctx.strokeStyle = `rgba(0,255,220,${alpha * 0.8})`;
-    ctx.lineWidth = 3 * (1 - prog);
-    ctx.stroke();
-
-    // Inner ring magenta (offset)
-    if (sw.r > 10) {
-      ctx.beginPath();
-      ctx.arc(sw.x, sw.y, sw.r * 0.75, 0, Math.PI*2);
-      ctx.strokeStyle = `rgba(255,0,200,${alpha * 0.4})`;
-      ctx.lineWidth = 1.5 * (1 - prog);
-      ctx.stroke();
+    const a    = (1 - prog) * 0.75;
+    ctx.beginPath(); ctx.arc(sw.x, sw.y, sw.r, 0, Math.PI*2);
+    ctx.strokeStyle = `rgba(0,255,220,${a * 0.7})`; ctx.lineWidth = 3*(1-prog); ctx.stroke();
+    if (sw.r > 12) {
+      ctx.beginPath(); ctx.arc(sw.x, sw.y, sw.r * 0.72, 0, Math.PI*2);
+      ctx.strokeStyle = `rgba(255,0,200,${a * 0.35})`; ctx.lineWidth = 1.5*(1-prog); ctx.stroke();
     }
-
-    // Radial spokes
-    ctx.save();
-    ctx.translate(sw.x, sw.y);
-    ctx.strokeStyle = `rgba(0,255,220,${alpha * 0.3})`;
-    ctx.lineWidth = 1;
+    ctx.save(); ctx.translate(sw.x, sw.y);
+    ctx.strokeStyle = `rgba(0,255,220,${a * 0.22})`; ctx.lineWidth = 1;
     for (let sp = 0; sp < 8; sp++) {
-      const a = (sp / 8) * Math.PI * 2 + frame * 0.02;
+      const ang = (sp/8) * Math.PI*2 + frame*0.025;
       ctx.beginPath();
-      ctx.moveTo(Math.cos(a) * sw.r * 0.3, Math.sin(a) * sw.r * 0.3);
-      ctx.lineTo(Math.cos(a) * sw.r, Math.sin(a) * sw.r);
+      ctx.moveTo(Math.cos(ang)*sw.r*0.28, Math.sin(ang)*sw.r*0.28);
+      ctx.lineTo(Math.cos(ang)*sw.r,       Math.sin(ang)*sw.r);
       ctx.stroke();
     }
     ctx.restore();
   }
 
-  // ── UPDATE + DRAW PARTICLES ──
-  ctx.save();
+  // Particle physics + draw
+  const mgx = W/2 + mouse.x;
+  const mgy = H/2 + mouse.y;
 
   for (let i = 0; i < pCount; i++) {
     const cx = px[i] - W/2;
     const cy = py[i] - H/2;
-    const distCenter = Math.sqrt(cx*cx + cy*cy) + 0.001;
+    const dc = Math.sqrt(cx*cx + cy*cy) + 0.001;
 
-    // Centre gravity
-    const gravForce = (bassFactor * 0.12 + 0.3) * gravityMul;
-    let ax = -cx / distCenter * gravForce / pmass[i];
-    let ay = -cy / distCenter * gravForce / pmass[i];
+    // Gravity toward center
+    const grav = (bassFactor * 0.12 + 0.3) * gravityMul;
+    let ax = -cx / dc * grav / pmass[i];
+    let ay = -cy / dc * grav / pmass[i];
 
-    // Mouse gravity / repulsion
-    const mx = px[i] - gx;
-    const my = py[i] - gy;
-    const distM = Math.sqrt(mx*mx + my*my) + 1;
-    if (distM < 200) {
-      const mForce = mouse.down ? -6 : 2;
-      ax += mx / distM * mForce * energy / pmass[i];
-      ay += my / distM * mForce * energy / pmass[i];
+    // Mouse gravity/repulsion
+    const mdx = px[i] - mgx;
+    const mdy = py[i] - mgy;
+    const dm  = Math.sqrt(mdx*mdx + mdy*mdy) + 1;
+    if (dm < 200) {
+      const mf = mouse.down ? -7 : 2.5;
+      ax += mdx/dm * mf * energy / pmass[i];
+      ay += mdy/dm * mf * energy / pmass[i];
     }
 
-    // Mids: rotational torque
-    ax += (-cy / distCenter) * midFactor * 0.04;
-    ay +=  (cx / distCenter) * midFactor * 0.04;
+    // Rotational torque from mids
+    ax += (-cy/dc) * midFactor * 0.04;
+    ay +=  (cx/dc) * midFactor * 0.04;
 
-    // Highs: jitter
-    if (highs > 0.1) {
-      ax += (Math.random() - 0.5) * highs * highFactor * 0.3;
-      ay += (Math.random() - 0.5) * highs * highFactor * 0.3;
+    // High freq jitter
+    if (highs > 0.08) {
+      ax += (Math.random()-0.5) * highs * highFactor * 0.28;
+      ay += (Math.random()-0.5) * highs * highFactor * 0.28;
     }
 
-    // Shockwave forces
+    // Shockwave push
     for (const sw of shockwaves) {
-      const sx = px[i] - sw.x;
-      const sy = py[i] - sw.y;
-      const sd = Math.sqrt(sx*sx + sy*sy) + 1;
-      const ring = Math.abs(sd - sw.r);
-      if (ring < 40) {
-        const f = (40 - ring) / 40 * sw.strength * 0.02;
-        ax += sx / sd * f / pmass[i];
-        ay += sy / sd * f / pmass[i];
+      const sdx = px[i] - sw.x;
+      const sdy = py[i] - sw.y;
+      const sd  = Math.sqrt(sdx*sdx + sdy*sdy) + 1;
+      const rim = Math.abs(sd - sw.r);
+      if (rim < 42) {
+        const f = (42-rim)/42 * sw.str * 0.02;
+        ax += sdx/sd * f / pmass[i];
+        ay += sdy/sd * f / pmass[i];
       }
     }
 
     // Integrate
     pvx[i] += ax * dt;
     pvy[i] += ay * dt;
-
-    // Damping
     pvx[i] *= 0.992;
     pvy[i] *= 0.992;
 
-    // Speed limit
-    let speed = Math.sqrt(pvx[i]*pvx[i] + pvy[i]*pvy[i]);
-    const maxSpeed = 6 + energy * 8;
-    if (speed > maxSpeed) {
-      pvx[i] = pvx[i] / speed * maxSpeed;
-      pvy[i] = pvy[i] / speed * maxSpeed;
-      speed = maxSpeed;
-    }
+    // Speed cap
+    let spd = Math.sqrt(pvx[i]*pvx[i] + pvy[i]*pvy[i]);
+    const maxSpd = 6 + energy * 8;
+    if (spd > maxSpd) { pvx[i] = pvx[i]/spd*maxSpd; pvy[i] = pvy[i]/spd*maxSpd; spd = maxSpd; }
 
     px[i] += pvx[i] * dt;
     py[i] += pvy[i] * dt;
 
     // Wrap
-    if (px[i] < -20) px[i] = W + 20;
-    if (px[i] > W+20) px[i] = -20;
-    if (py[i] < -20) py[i] = H + 20;
-    if (py[i] > H+20) py[i] = -20;
+    if (px[i] < -20)    px[i] = W + 20;
+    if (px[i] > W + 20) px[i] = -20;
+    if (py[i] < -20)    py[i] = H + 20;
+    if (py[i] > H + 20) py[i] = -20;
 
-    // ── DRAW PARTICLE — CYBERPUNK STYLE ──
-    const speedRatio = Math.min(speed / (maxSpeed * 0.8), 1);
-    const sz = (0.6 + pmass[i] * 0.5) * (1 + energy * 1.8);
-    const hue = particleHue(i);
-    // Brightness spikes with energy
-    const lum = 55 + energy * 35 + speedRatio * 20;
-    const sat = 90 + energy * 10;
-    const alpha = 0.55 + energy * 0.45;
+    // ── DRAW ──────────────────────────────────
+    const hue      = HUES[phue[i]];
+    const spdRatio = Math.min(spd / (maxSpd * 0.8), 1);
+    const sz       = (0.55 + pmass[i] * 0.5) * (1 + energy * 1.8);
+    const lum      = 52 + energy*36 + spdRatio*18;
+    const sat      = 90 + energy*10;
+    const alp      = 0.55 + energy*0.45;
+    const ca       = chromaOff * (pmass[i] > 1 ? 1 : 0.4);
 
-    // Chromatic aberration: offset red/blue channels slightly on beats
-    const ca = chromaOffset * (pmass[i] > 1 ? 1 : 0.4);
+    if (pshape[i] === 1) {
+      // DIAMOND
+      if (ca > 0.5) {
+        ctx.save();
+        ctx.translate(px[i]+ca, py[i]); diamond(0,0,sz*1.35);
+        ctx.fillStyle = `rgba(0,255,220,${alp*0.22})`; ctx.fill();
+        ctx.translate(-ca*2, 0); diamond(0,0,sz*1.35);
+        ctx.fillStyle = `rgba(255,0,200,${alp*0.22})`; ctx.fill();
+        ctx.restore();
+      }
+      diamond(px[i], py[i], sz*1.1);
+      ctx.fillStyle = `hsla(${hue},${sat}%,${lum}%,${alp})`; ctx.fill();
+      ctx.beginPath(); ctx.arc(px[i], py[i], sz*0.32, 0, Math.PI*2);
+      ctx.fillStyle = `hsla(${hue},100%,95%,${alp})`; ctx.fill();
+      if (energy > 0.12) {
+        const gr = ctx.createRadialGradient(px[i],py[i],0, px[i],py[i],sz*4.5);
+        gr.addColorStop(0, `hsla(${hue},100%,70%,${energy*0.22})`);
+        gr.addColorStop(1, 'transparent');
+        ctx.beginPath(); ctx.arc(px[i],py[i],sz*4.5,0,Math.PI*2); ctx.fillStyle=gr; ctx.fill();
+      }
 
-    if (ptype[i] === 1) {
-      // ── DIAMOND ──
-      // Cyan ghost offset
-      ctx.save();
-      ctx.translate(px[i] + ca, py[i]);
-      drawDiamond(0, 0, sz * 1.3);
-      ctx.fillStyle = `rgba(0,255,220,${alpha * 0.25})`;
-      ctx.fill();
-      // Magenta ghost offset
-      ctx.translate(-ca*2, 0);
-      drawDiamond(0, 0, sz * 1.3);
-      ctx.fillStyle = `rgba(255,0,200,${alpha * 0.25})`;
-      ctx.fill();
-      ctx.restore();
-
-      // Core diamond
-      drawDiamond(px[i], py[i], sz * 1.1);
-      ctx.fillStyle = `hsla(${hue},${sat}%,${lum}%,${alpha})`;
-      ctx.fill();
-
-      // Bright center point
-      ctx.beginPath();
-      ctx.arc(px[i], py[i], sz * 0.35, 0, Math.PI*2);
-      ctx.fillStyle = `hsla(${hue},100%,95%,${alpha})`;
-      ctx.fill();
-
-      // Outer glow
-      ctx.save();
-      ctx.shadowColor = `hsla(${hue},100%,70%,1)`;
-      ctx.shadowBlur = 8 + energy * 12;
-      drawDiamond(px[i], py[i], sz * 1.1);
-      ctx.fillStyle = `hsla(${hue},100%,${lum}%,${alpha * 0.4})`;
-      ctx.fill();
-      ctx.restore();
-
-    } else if (ptype[i] === 3) {
-      // ── SPARK — thin motion streak ──
-      if (speed > 0.5) {
-        const len = Math.min(speed * 3.5 + energy * 8, 28);
-        const nx = -pvx[i] / speed;
-        const ny = -pvy[i] / speed;
-        const grad = ctx.createLinearGradient(
-          px[i], py[i],
-          px[i] + nx * len, py[i] + ny * len
-        );
-        grad.addColorStop(0, `hsla(${hue},100%,${lum}%,${alpha})`);
-        grad.addColorStop(0.4, `hsla(${hue},100%,${lum}%,${alpha * 0.5})`);
-        grad.addColorStop(1, `hsla(${hue},100%,${lum}%,0)`);
-        ctx.beginPath();
-        ctx.moveTo(px[i], py[i]);
-        ctx.lineTo(px[i] + nx * len, py[i] + ny * len);
-        ctx.strokeStyle = grad;
-        ctx.lineWidth = sz * 0.8;
-        ctx.lineCap = 'round';
-        ctx.stroke();
-
-        // Head dot
-        ctx.beginPath();
-        ctx.arc(px[i], py[i], sz * 0.7, 0, Math.PI*2);
-        ctx.fillStyle = `hsla(${hue},100%,92%,${alpha})`;
-        ctx.fill();
+    } else if (pshape[i] === 2) {
+      // SPARK STREAK
+      if (spd > 0.4) {
+        const sLen = Math.min(spd*3.8 + energy*9, 30);
+        const nx   = -pvx[i]/spd;
+        const ny   = -pvy[i]/spd;
+        const sg   = ctx.createLinearGradient(px[i],py[i], px[i]+nx*sLen, py[i]+ny*sLen);
+        sg.addColorStop(0,   `hsla(${hue},100%,${lum}%,${alp})`);
+        sg.addColorStop(0.4, `hsla(${hue},100%,${lum}%,${alp*0.5})`);
+        sg.addColorStop(1,   'transparent');
+        ctx.beginPath(); ctx.moveTo(px[i],py[i]); ctx.lineTo(px[i]+nx*sLen, py[i]+ny*sLen);
+        ctx.strokeStyle=sg; ctx.lineWidth=sz*0.85; ctx.lineCap='round'; ctx.stroke();
+        ctx.beginPath(); ctx.arc(px[i],py[i],sz*0.65,0,Math.PI*2);
+        ctx.fillStyle=`hsla(${hue},100%,92%,${alp})`; ctx.fill();
       }
 
     } else {
-      // ── DOT + CROSS HAIR ──
-      // Crosshair lines
-      const cLen = sz * 2.2 + speedRatio * 3;
+      // CROSSHAIR DOT
+      const cLen = sz*2.2 + spdRatio*3;
       ctx.save();
-      ctx.strokeStyle = `hsla(${hue},100%,${lum}%,${alpha * 0.5})`;
-      ctx.lineWidth = 0.6;
+      ctx.strokeStyle = `hsla(${hue},100%,${lum}%,${alp*0.45})`; ctx.lineWidth = 0.6;
       ctx.beginPath();
-      ctx.moveTo(px[i] - cLen, py[i]); ctx.lineTo(px[i] + cLen, py[i]);
-      ctx.moveTo(px[i], py[i] - cLen); ctx.lineTo(px[i], py[i] + cLen);
-      ctx.stroke();
-      ctx.restore();
-
-      // Chromatic offset dots
+      ctx.moveTo(px[i]-cLen, py[i]); ctx.lineTo(px[i]+cLen, py[i]);
+      ctx.moveTo(px[i], py[i]-cLen); ctx.lineTo(px[i], py[i]+cLen);
+      ctx.stroke(); ctx.restore();
       if (ca > 0.5) {
-        ctx.beginPath();
-        ctx.arc(px[i] + ca, py[i], sz * 0.8, 0, Math.PI*2);
-        ctx.fillStyle = `rgba(0,255,255,${alpha * 0.3})`;
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(px[i] - ca, py[i], sz * 0.8, 0, Math.PI*2);
-        ctx.fillStyle = `rgba(255,0,200,${alpha * 0.3})`;
-        ctx.fill();
+        ctx.beginPath(); ctx.arc(px[i]+ca, py[i], sz*0.8, 0, Math.PI*2);
+        ctx.fillStyle=`rgba(0,255,220,${alp*0.28})`; ctx.fill();
+        ctx.beginPath(); ctx.arc(px[i]-ca, py[i], sz*0.8, 0, Math.PI*2);
+        ctx.fillStyle=`rgba(255,0,200,${alp*0.28})`; ctx.fill();
       }
-
-      // Core circle
-      ctx.beginPath();
-      ctx.arc(px[i], py[i], sz, 0, Math.PI*2);
-      ctx.fillStyle = `hsla(${hue},${sat}%,${lum}%,${alpha})`;
-      ctx.fill();
-
-      // Hard white core
-      ctx.beginPath();
-      ctx.arc(px[i], py[i], sz * 0.4, 0, Math.PI*2);
-      ctx.fillStyle = `rgba(255,255,255,${alpha * 0.8})`;
-      ctx.fill();
-
-      // Soft glow halo
-      if (energy > 0.15 || speedRatio > 0.4) {
-        const gr = ctx.createRadialGradient(px[i], py[i], sz*0.5, px[i], py[i], sz*3.5);
-        gr.addColorStop(0, `hsla(${hue},100%,70%,${(energy * 0.18 + speedRatio * 0.1)})`);
-        gr.addColorStop(1, `hsla(${hue},100%,70%,0)`);
-        ctx.beginPath();
-        ctx.arc(px[i], py[i], sz * 3.5, 0, Math.PI*2);
-        ctx.fillStyle = gr;
-        ctx.fill();
+      ctx.beginPath(); ctx.arc(px[i],py[i],sz,0,Math.PI*2);
+      ctx.fillStyle=`hsla(${hue},${sat}%,${lum}%,${alp})`; ctx.fill();
+      ctx.beginPath(); ctx.arc(px[i],py[i],sz*0.38,0,Math.PI*2);
+      ctx.fillStyle=`rgba(255,255,255,${alp*0.75})`; ctx.fill();
+      if (energy > 0.12 || spdRatio > 0.35) {
+        const gr2 = ctx.createRadialGradient(px[i],py[i],sz*0.5, px[i],py[i],sz*3.8);
+        gr2.addColorStop(0, `hsla(${hue},100%,70%,${energy*0.16+spdRatio*0.08})`);
+        gr2.addColorStop(1, 'transparent');
+        ctx.beginPath(); ctx.arc(px[i],py[i],sz*3.8,0,Math.PI*2); ctx.fillStyle=gr2; ctx.fill();
       }
-    }
-
-  ctx.restore();
-
-  // ── CYBERPUNK POST-FX ──
-
-  // Central core bloom — cyan/magenta split
-  if (energy > 0.15) {
-    // Cyan bloom
-    const g1 = ctx.createRadialGradient(W/2 - chromaOffset, H/2, 0, W/2 - chromaOffset, H/2, 180 + bass * 220);
-    g1.addColorStop(0, `rgba(0,255,220,${energy * 0.06})`);
-    g1.addColorStop(1, 'transparent');
-    ctx.fillStyle = g1;
-    ctx.fillRect(0, 0, W, H);
-
-    // Magenta bloom (offset)
-    const g2 = ctx.createRadialGradient(W/2 + chromaOffset, H/2, 0, W/2 + chromaOffset, H/2, 140 + bass * 180);
-    g2.addColorStop(0, `rgba(255,0,200,${energy * 0.04})`);
-    g2.addColorStop(1, 'transparent');
-    ctx.fillStyle = g2;
-    ctx.fillRect(0, 0, W, H);
-  }
-
-  // Glitch horizontal bar
-  if (glitchTimer > 0) {
-    glitchTimer -= dt;
-    const numBars = Math.floor(2 + Math.random() * 3);
-    for (let b = 0; b < numBars; b++) {
-      const gy3 = Math.random() * H;
-      const gh = 1 + Math.random() * 4;
-      ctx.fillStyle = `rgba(0,255,220,${0.06 + Math.random() * 0.08})`;
-      ctx.fillRect(0, gy3, W, gh);
-      // offset copy
-      const offX = (Math.random() - 0.5) * 30;
-      ctx.drawImage(canvas, offX, gy3 - 1, W, gh + 2, offX + (Math.random()-0.5)*8, gy3 - 1, W, gh + 2);
     }
   }
 
-  // Decay chroma offset
-  chromaOffset *= 0.85;
-  if (chromaOffset < 0.1) chromaOffset = 0;
+  // Bloom
+  if (energy > 0.14) {
+    const b1 = ctx.createRadialGradient(W/2-chromaOff*0.5,H/2,0, W/2-chromaOff*0.5,H/2, 180+bass*230);
+    b1.addColorStop(0, `rgba(0,255,220,${energy*0.055})`); b1.addColorStop(1,'transparent');
+    ctx.fillStyle=b1; ctx.fillRect(0,0,W,H);
+    const b2 = ctx.createRadialGradient(W/2+chromaOff*0.5,H/2,0, W/2+chromaOff*0.5,H/2, 140+bass*180);
+    b2.addColorStop(0, `rgba(255,0,200,${energy*0.04})`); b2.addColorStop(1,'transparent');
+    ctx.fillStyle=b2; ctx.fillRect(0,0,W,H);
+  }
 
-  // ── FREQ BAR VISUALIZER ──
+  // Glitch bars
+  if (glitchLeft > 0) {
+    glitchLeft--;
+    for (let b = 0; b < 3; b++) {
+      const gy2 = Math.random() * H;
+      const gh  = 1 + Math.random() * 5;
+      ctx.fillStyle = `rgba(0,255,220,${0.05 + Math.random()*0.07})`;
+      ctx.fillRect(0, gy2, W, gh);
+    }
+  }
+
+  chromaOff *= 0.82;
+  if (chromaOff < 0.05) chromaOff = 0;
+
   drawFreqBars();
-
-  // ── NO AUDIO IDLE ANIMATION ──
-  if (!audioActive) idleAnimation();
-}
-
-function idleAnimation() {
-  // gentle pulse when no audio
-  const t = Date.now() / 1000;
-  bass  = 0.15 + Math.sin(t * 0.7) * 0.08;
-  mids  = 0.10 + Math.sin(t * 1.3) * 0.06;
-  highs = 0.05 + Math.sin(t * 2.1) * 0.04;
-  vol   = (bass + mids + highs) / 3;
 }
 
 function drawFreqBars() {
   if (!analyser) return;
   fctx.clearRect(0, 0, W, 60);
   const bars = 128;
-  const bw = W / bars;
+  const bw   = W / bars;
   for (let i = 0; i < bars; i++) {
-    const v = dataArray[i] / 255;
-    const h = v * 55;
-    // Alternate cyan and magenta
-    const hue = i % 3 === 0 ? 185 : i % 3 === 1 ? 300 : 55;
-    const bright = 50 + v * 40;
-    fctx.fillStyle = `hsla(${hue}, 100%, ${bright}%, ${0.35 + v * 0.65})`;
-    fctx.fillRect(i * bw, 60 - h, bw - 1, h);
-    // Top cap
+    const v   = fftData[i] / 255;
+    const h   = v * 54;
+    const hue = HUES[i % HUES.length];
+    const br  = 45 + v * 44;
+    fctx.fillStyle = `hsla(${hue},100%,${br}%,${0.3 + v*0.7})`;
+    fctx.fillRect(i*bw, 60-h, bw-1, h);
     if (h > 2) {
-      fctx.fillStyle = `hsla(${hue}, 100%, 90%, ${v * 0.9})`;
-      fctx.fillRect(i * bw, 60 - h - 1, bw - 1, 2);
+      fctx.fillStyle = `hsla(${hue},100%,92%,${v*0.85})`;
+      fctx.fillRect(i*bw, 60-h-2, bw-1, 2);
     }
   }
 }
 
-// ── BUTTON HANDLERS ──
+// ── SLIDER BINDINGS ───────────────────────────
+function bindSlider(id, valId, fn) {
+  const sl = document.getElementById(id);
+  const vl = document.getElementById(valId);
+  sl.addEventListener('input', () => fn(+sl.value, vl));
+}
+bindSlider('sl-gravity','val-gravity',(v,el)=>{ gravityMul=v/100; el.textContent=v; });
+bindSlider('sl-trail',  'val-trail',  (v,el)=>{ trailAlpha=v; el.textContent=v; });
+bindSlider('sl-force',  'val-force',  (v,el)=>{ forceMul=v; el.textContent=v; });
+bindSlider('sl-count',  'val-count',  (v,el)=>{
+  targetCount=v;
+  el.textContent = v>=1000 ? (v/1000).toFixed(v%1000===0?0:1)+'k' : v;
+  initParticles();
+});
+
+// ── BUTTON HANDLERS ───────────────────────────
 document.getElementById('btn-start').addEventListener('click', () => {
   const ob = document.getElementById('onboard');
-  ob.classList.add('hidden');
-  setTimeout(() => ob.style.display = 'none', 800);
+  ob.classList.add('gone');
+  setTimeout(() => { ob.style.display = 'none'; }, 850);
   initParticles();
+  running = true;
   requestAnimationFrame(loop);
 });
 
@@ -923,10 +566,8 @@ document.getElementById('btn-mic').addEventListener('click', async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     setupAnalyser(stream);
     document.getElementById('status-text').textContent = 'Microphone';
-    showTooltip('Microphone active');
-  } catch(e) {
-    showTooltip('Microphone access denied');
-  }
+    showTip('Microphone active');
+  } catch(e) { showTip('Microphone access denied'); }
 });
 
 document.getElementById('btn-system').addEventListener('click', async () => {
@@ -934,30 +575,21 @@ document.getElementById('btn-system').addEventListener('click', async () => {
     const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
     setupAnalyser(stream);
     document.getElementById('status-text').textContent = 'System Audio';
-    showTooltip('System audio active — play any music!');
-  } catch(e) {
-    showTooltip('Screen share cancelled or not supported');
-  }
+    showTip('System audio active — play any music!');
+  } catch(e) { showTip('Screen share cancelled or unsupported'); }
 });
 
-// ── TOOLTIP ──
-let tooltipTimer;
-function showTooltip(msg) {
+let tipTimer;
+function showTip(msg) {
   const el = document.getElementById('tooltip');
-  el.textContent = msg;
-  el.classList.add('show');
-  clearTimeout(tooltipTimer);
-  tooltipTimer = setTimeout(() => el.classList.remove('show'), 3000);
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(tipTimer); tipTimer = setTimeout(()=>el.classList.remove('show'), 3000);
 }
 
-// ── KEYBOARD SHORTCUTS ──
 window.addEventListener('keydown', e => {
   if (e.key === ' ') spawnShockwave(W/2, H/2);
-  if (e.key === 'r') initParticles();
+  if (e.key === 'r' || e.key === 'R') initParticles();
 });
-
-// ── INIT ──
-initParticles();
 </script>
 </body>
 </html>
